@@ -10,10 +10,11 @@ import plotly.graph_objects as go
 
 def _significance_category(
     df: pd.DataFrame,
-    fdr_cutoff: float,
+    p_col: str,
+    p_cutoff: float,
     logfc_cutoff: float,
 ) -> pd.Series:
-    sig = (df["FDR"] <= fdr_cutoff) & (df["logFC"].abs() >= logfc_cutoff)
+    sig = (df[p_col] <= p_cutoff) & (df["logFC"].abs() >= logfc_cutoff)
     up = sig & (df["logFC"] > 0)
     down = sig & (df["logFC"] < 0)
     cat = np.full(len(df), "NS", dtype=object)
@@ -24,25 +25,39 @@ def _significance_category(
 
 def volcano_plot(
     df: pd.DataFrame,
-    fdr_cutoff: float,
+    p_col: str,
+    p_cutoff: float,
     logfc_cutoff: float,
     label_top_n: int = 0,
     ranking_metric: str = "FDR",
     selected_antigen: Optional[str] = None,
 ):
+    """p_col: 'FDR' or 'PValue'. Uses corresponding neglog10 column for y-axis."""
     data = df.copy()
-    data["category"] = _significance_category(data, fdr_cutoff, logfc_cutoff)
+    data["category"] = _significance_category(data, p_col, p_cutoff, logfc_cutoff)
+
+    neglog10_col = "neglog10FDR" if p_col == "FDR" else "neglog10PValue"
+    if neglog10_col not in data.columns:
+        neglog10_col = "neglog10FDR"
 
     # Ranking metric for labeling
     if ranking_metric == "FDR":
         score = data["FDR"].fillna(1.0)
         order = score
         ascending = True
+    elif ranking_metric == "PValue" and "PValue" in data.columns:
+        score = data["PValue"].fillna(1.0)
+        order = score
+        ascending = True
     elif ranking_metric == "abs_logFC":
         score = data["logFC"].abs()
         order = -score
         ascending = False
-    else:  # neglog10FDR
+    elif ranking_metric == "neglog10PValue" and "neglog10PValue" in data.columns:
+        score = data["neglog10PValue"]
+        order = -score
+        ascending = False
+    else:
         score = data["neglog10FDR"]
         order = -score
         ascending = False
@@ -56,12 +71,12 @@ def volcano_plot(
     fig = px.scatter(
         data,
         x="logFC",
-        y="neglog10FDR",
+        y=neglog10_col,
         color="category",
         hover_data={
             "antigen": True,
             "logFC": True,
-            "FDR": True,
+            "FDR": "FDR" in data.columns,
             "PValue": "PValue" in data.columns,
         },
         text=text,
@@ -69,7 +84,7 @@ def volcano_plot(
     )
 
     # Threshold lines
-    y_thresh = -np.log10(max(fdr_cutoff, 1e-300))
+    y_thresh = -np.log10(max(p_cutoff, 1e-300))
     fig.add_hline(y=y_thresh, line_dash="dot", line_color="black")
     fig.add_vline(x=logfc_cutoff, line_dash="dot", line_color="black")
     fig.add_vline(x=-logfc_cutoff, line_dash="dot", line_color="black")
@@ -81,7 +96,7 @@ def volcano_plot(
             fig.add_trace(
                 go.Scatter(
                     x=sel["logFC"],
-                    y=sel["neglog10FDR"],
+                    y=sel[neglog10_col],
                     mode="markers+text",
                     text=sel["antigen"],
                     textposition="top center",
@@ -91,9 +106,10 @@ def volcano_plot(
                 )
             )
 
+    y_label = "-log10(FDR)" if p_col == "FDR" else "-log10(P-value)"
     fig.update_layout(
         xaxis_title="logFC",
-        yaxis_title="-log10(FDR)",
+        yaxis_title=y_label,
         legend_title="Significance",
         template="plotly_white",
     )
@@ -150,14 +166,20 @@ def ma_plot(
 
 def igg_iga_scatter(
     merged_df: pd.DataFrame,
-    fdr_cutoff: float,
+    p_col_igg: str,
+    p_col_iga: str,
+    p_cutoff: float,
     logfc_cutoff: float,
     selected_antigen: Optional[str] = None,
 ):
+    """p_col_igg/iga: e.g. 'FDR_IgG'/'FDR_IgA' or 'PValue_IgG'/'PValue_IgA'."""
     data = merged_df.copy()
-    # Simple significance classification for both isotypes
-    sig_igg = (data["FDR_IgG"] <= fdr_cutoff) & (data["logFC_IgG"].abs() >= logfc_cutoff)
-    sig_iga = (data["FDR_IgA"] <= fdr_cutoff) & (data["logFC_IgA"].abs() >= logfc_cutoff)
+    if p_col_igg not in data.columns:
+        p_col_igg = "FDR_IgG"
+    if p_col_iga not in data.columns:
+        p_col_iga = "FDR_IgA"
+    sig_igg = (data[p_col_igg] <= p_cutoff) & (data["logFC_IgG"].abs() >= logfc_cutoff)
+    sig_iga = (data[p_col_iga] <= p_cutoff) & (data["logFC_IgA"].abs() >= logfc_cutoff)
     cat = np.full(len(data), "NS", dtype=object)
     cat[sig_igg & sig_iga] = "Both"
     cat[sig_igg & ~sig_iga] = "IgG only"

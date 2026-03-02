@@ -103,7 +103,8 @@ def _antigen_details_panel(df: pd.DataFrame, selected_antigen: Optional[str]) ->
 
 def _filtered_df(
     df: pd.DataFrame,
-    fdr_cutoff: float,
+    sig_col: str,
+    sig_cutoff: float,
     logfc_cutoff: float,
     min_logcpm: Optional[float],
     show_only_sig: bool,
@@ -111,7 +112,9 @@ def _filtered_df(
     filtered = df.copy()
     if min_logcpm is not None and "logCPM" in filtered.columns:
         filtered = filtered[filtered["logCPM"] >= min_logcpm]
-    sig_mask = (filtered["FDR"] <= fdr_cutoff) & (filtered["logFC"].abs() >= logfc_cutoff)
+    if sig_col not in filtered.columns:
+        sig_col = "FDR"
+    sig_mask = (filtered[sig_col] <= sig_cutoff) & (filtered["logFC"].abs() >= logfc_cutoff)
     if show_only_sig:
         filtered = filtered[sig_mask]
     return filtered
@@ -151,16 +154,31 @@ def _render_dataset_tab(dataset_key: str) -> None:
         st.error(err)
         return
 
+    has_pvalue = "PValue" in df.columns
+    sig_metric_options = ["FDR", "P-value"]
+    sig_metric_choice = st.radio(
+        "Significance metric for plots and filtering",
+        options=sig_metric_options,
+        index=0,
+        key=f"{dataset_key}__{contrast}__sig_metric",
+        horizontal=True,
+    )
+    if sig_metric_choice == "P-value" and not has_pvalue:
+        st.caption("P-value column not found in this dataset; using FDR.")
+        sig_col = "FDR"
+    else:
+        sig_col = "PValue" if sig_metric_choice == "P-value" else "FDR"
+
     # Sliders and toggles
     col1, col2, col3 = st.columns(3)
     with col1:
-        fdr_cutoff = st.slider(
-            "FDR cutoff",
-            min_value=0.0,
+        sig_cutoff = st.slider(
+            "Significance cutoff",
+            min_value=0.001,
             max_value=0.2,
             value=0.05,
             step=0.005,
-            key=f"{dataset_key}__{contrast}__fdr",
+            key=f"{dataset_key}__{contrast}__sig_cutoff",
         )
     with col2:
         logfc_cutoff = st.slider(
@@ -200,14 +218,21 @@ def _render_dataset_tab(dataset_key: str) -> None:
             key=f"{dataset_key}__{contrast}__topn",
         )
     with col6:
+        ranking_opts = ["FDR", "abs_logFC", "neglog10FDR"]
+        if has_pvalue:
+            ranking_opts.extend(["P-value", "neglog10PValue"])
         ranking_metric = st.selectbox(
             "Ranking metric for labels",
-            options=["FDR", "abs_logFC", "neglog10FDR"],
+            options=ranking_opts,
             key=f"{dataset_key}__{contrast}__ranking",
         )
+    if ranking_metric == "P-value":
+        ranking_metric = "PValue"
+    elif ranking_metric == "neglog10PValue" and "neglog10PValue" not in df.columns:
+        ranking_metric = "neglog10FDR"
 
     # Filtered data for current view
-    filtered = _filtered_df(df, fdr_cutoff, logfc_cutoff, min_logcpm_val, show_only_sig)
+    filtered = _filtered_df(df, sig_col, sig_cutoff, logfc_cutoff, min_logcpm_val, show_only_sig)
 
     # Antigen search & selection
     state_key = _get_selected_antigen_key(dataset_key, contrast)
@@ -223,7 +248,8 @@ def _render_dataset_tab(dataset_key: str) -> None:
         st.markdown("**Volcano plot**")
         fig_volcano = volcano_plot(
             filtered,
-            fdr_cutoff=fdr_cutoff,
+            p_col=sig_col,
+            p_cutoff=sig_cutoff,
             logfc_cutoff=logfc_cutoff,
             label_top_n=label_top_n,
             ranking_metric=ranking_metric,
@@ -313,16 +339,31 @@ def _render_compare_tab() -> None:
         st.error(f"IgA: {iga_err}")
         return
 
-    # Shared cutoffs
+    has_pvalue_igg = "PValue" in igg_df.columns
+    has_pvalue_iga = "PValue" in iga_df.columns
+    has_pvalue = has_pvalue_igg and has_pvalue_iga
+    sig_metric_choice = st.radio(
+        "Significance metric for plots and filtering",
+        options=["FDR", "P-value"],
+        index=0,
+        key=f"compare__{family_key}__{contrast}__sig_metric",
+        horizontal=True,
+    )
+    if sig_metric_choice == "P-value" and not has_pvalue:
+        st.caption("P-value not available for both isotypes; using FDR.")
+        sig_col = "FDR"
+    else:
+        sig_col = "PValue" if sig_metric_choice == "P-value" else "FDR"
+
     col1, col2 = st.columns(2)
     with col1:
-        fdr_cutoff = st.slider(
-            "FDR cutoff",
-            min_value=0.0,
+        sig_cutoff = st.slider(
+            "Significance cutoff",
+            min_value=0.001,
             max_value=0.2,
             value=0.05,
             step=0.005,
-            key=f"compare__{family_key}__{contrast}__fdr",
+            key=f"compare__{family_key}__{contrast}__sig_cutoff",
         )
     with col2:
         logfc_cutoff = st.slider(
@@ -347,9 +388,10 @@ def _render_compare_tab() -> None:
     merged = pd.merge(igg_prefixed, iga_prefixed, on="antigen", how="inner")
     merged["delta_logFC"] = merged["logFC_IgA"] - merged["logFC_IgG"]
 
-    # Significance flags
-    merged["sig_IgG"] = (merged["FDR_IgG"] <= fdr_cutoff) & (merged["logFC_IgG"].abs() >= logfc_cutoff)
-    merged["sig_IgA"] = (merged["FDR_IgA"] <= fdr_cutoff) & (merged["logFC_IgA"].abs() >= logfc_cutoff)
+    p_col_igg = f"{sig_col}_IgG" if f"{sig_col}_IgG" in merged.columns else "FDR_IgG"
+    p_col_iga = f"{sig_col}_IgA" if f"{sig_col}_IgA" in merged.columns else "FDR_IgA"
+    merged["sig_IgG"] = (merged[p_col_igg] <= sig_cutoff) & (merged["logFC_IgG"].abs() >= logfc_cutoff)
+    merged["sig_IgA"] = (merged[p_col_iga] <= sig_cutoff) & (merged["logFC_IgA"].abs() >= logfc_cutoff)
 
     # Antigen selection for compare
     state_key = _get_selected_antigen_compare_key(family_key)
@@ -372,7 +414,9 @@ def _render_compare_tab() -> None:
         st.markdown("**IgG vs IgA logFC scatter**")
         fig_scatter = igg_iga_scatter(
             merged,
-            fdr_cutoff=fdr_cutoff,
+            p_col_igg=p_col_igg,
+            p_col_iga=p_col_iga,
+            p_cutoff=sig_cutoff,
             logfc_cutoff=logfc_cutoff,
             selected_antigen=selected_antigen,
         )
@@ -385,7 +429,8 @@ def _render_compare_tab() -> None:
             st.caption("IgG")
             fig_vol_igg = volcano_plot(
                 igg_df,
-                fdr_cutoff=fdr_cutoff,
+                p_col=sig_col,
+                p_cutoff=sig_cutoff,
                 logfc_cutoff=logfc_cutoff,
                 label_top_n=0,
                 ranking_metric="FDR",
@@ -396,7 +441,8 @@ def _render_compare_tab() -> None:
             st.caption("IgA")
             fig_vol_iga = volcano_plot(
                 iga_df,
-                fdr_cutoff=fdr_cutoff,
+                p_col=sig_col,
+                p_cutoff=sig_cutoff,
                 logfc_cutoff=logfc_cutoff,
                 label_top_n=0,
                 ranking_metric="FDR",

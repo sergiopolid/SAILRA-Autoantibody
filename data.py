@@ -258,6 +258,8 @@ def load_and_standardize(
 
     # Derived columns
     df["neglog10FDR"] = -np.log10(np.clip(df["FDR"].astype(float), 1e-300, None))
+    if "PValue" in df.columns:
+        df["neglog10PValue"] = -np.log10(np.clip(df["PValue"].astype(float), 1e-300, None))
 
     return df, None
 
