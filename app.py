@@ -255,7 +255,7 @@ def _render_dataset_tab(dataset_key: str) -> None:
             ranking_metric=ranking_metric,
             selected_antigen=selected_antigen,
         )
-        st.plotly_chart(fig_volcano, use_container_width=True)
+        st.plotly_chart(fig_volcano, use_container_width=True, key=f"{dataset_key}__{contrast}__volcano")
 
     with col_right:
         st.markdown("**MA plot**")
@@ -269,7 +269,7 @@ def _render_dataset_tab(dataset_key: str) -> None:
             st.info("MA plot unavailable: logCPM/AveExpr column not found.")
         else:
             fig_ma = ma_plot(filtered, x_col=ma_x, selected_antigen=selected_antigen)
-            st.plotly_chart(fig_ma, use_container_width=True)
+            st.plotly_chart(fig_ma, use_container_width=True, key=f"{dataset_key}__{contrast}__ma")
 
     # Table + export
     st.subheader("Hits table")
@@ -420,7 +420,7 @@ def _render_compare_tab() -> None:
             logfc_cutoff=logfc_cutoff,
             selected_antigen=selected_antigen,
         )
-        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.plotly_chart(fig_scatter, use_container_width=True, key=f"compare__{family_key}__{contrast}__scatter")
 
     with col_volcano:
         st.markdown("**Volcano plots (side-by-side)**")
@@ -436,7 +436,7 @@ def _render_compare_tab() -> None:
                 ranking_metric="FDR",
                 selected_antigen=selected_antigen,
             )
-            st.plotly_chart(fig_vol_igg, use_container_width=True)
+            st.plotly_chart(fig_vol_igg, use_container_width=True, key=f"compare__{family_key}__{contrast}__vol_igg")
         with subcol2:
             st.caption("IgA")
             fig_vol_iga = volcano_plot(
@@ -448,7 +448,7 @@ def _render_compare_tab() -> None:
                 ranking_metric="FDR",
                 selected_antigen=selected_antigen,
             )
-            st.plotly_chart(fig_vol_iga, use_container_width=True)
+            st.plotly_chart(fig_vol_iga, use_container_width=True, key=f"compare__{family_key}__{contrast}__vol_iga")
 
     st.subheader("MA plots (side-by-side)")
     ma_col1, ma_col2 = st.columns(2)
@@ -463,7 +463,7 @@ def _render_compare_tab() -> None:
             st.info("MA plot unavailable for IgG: logCPM/AveExpr column not found.")
         else:
             fig_ma_igg = ma_plot(igg_df, x_col=ma_x_igg, selected_antigen=selected_antigen)
-            st.plotly_chart(fig_ma_igg, use_container_width=True)
+            st.plotly_chart(fig_ma_igg, use_container_width=True, key=f"compare__{family_key}__{contrast}__ma_igg")
 
     with ma_col2:
         st.caption("IgA")
@@ -476,7 +476,7 @@ def _render_compare_tab() -> None:
             st.info("MA plot unavailable for IgA: logCPM/AveExpr column not found.")
         else:
             fig_ma_iga = ma_plot(iga_df, x_col=ma_x_iga, selected_antigen=selected_antigen)
-            st.plotly_chart(fig_ma_iga, use_container_width=True)
+            st.plotly_chart(fig_ma_iga, use_container_width=True, key=f"compare__{family_key}__{contrast}__ma_iga")
 
     # Merged table + export
     st.subheader("Merged IgG/IgA table")
