@@ -15,20 +15,35 @@ from config import DATASETS
 
 
 ANTIGEN_CANDIDATE_COLUMNS = [
+    # Generic antigen / gene / symbol names
     "antigen",
     "Antigen",
     "gene",
     "Gene",
-    "target",
-    "Target",
+    "Gene_Names",
+    "gene_name",
+    "GeneName",
     "symbol",
     "Symbol",
+    "target",
+    "Target",
     "ID",
     "id",
+    # Common feature identifiers in these datasets
+    "Feature_ID",
+    "feature_id",
+    "Accession",
+    "accession",
+    # Descriptive protein/antigen names
+    "Protein_Names",
+    "protein_name",
     "Protein",
     "protein",
     "Name",
     "name",
+    # Sometimes species name is the antigen-like unit
+    "Species",
+    "species",
 ]
 
 LOGFC_CANDIDATE_COLUMNS = ["logFC", "logfc", "LogFC"]
