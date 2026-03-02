@@ -38,6 +38,9 @@ def _download_button(label: str, df: pd.DataFrame, filename: str, key: str) -> N
     )
 
 
+NO_SELECTION_LABEL = "— No selection —"
+
+
 def _antigen_search_and_select(
     df: pd.DataFrame,
     state_key: str,
@@ -45,6 +48,7 @@ def _antigen_search_and_select(
 ) -> Optional[str]:
     """
     Search box + dropdown-based antigen selection.
+    First option is "No selection" so the plot displays without highlighting any protein.
     """
     if state_key not in st.session_state:
         st.session_state[state_key] = None
@@ -59,21 +63,30 @@ def _antigen_search_and_select(
 
     if not filtered:
         st.info("No antigens match the current search/filter criteria.")
-        return st.session_state[state_key]
+        st.selectbox(
+            "Select antigen to display",
+            [NO_SELECTION_LABEL],
+            index=0,
+            key=f"{state_key}__selectbox",
+        )
+        st.session_state[state_key] = None
+        return None
 
-    default_index = 0
+    options = [NO_SELECTION_LABEL] + filtered
+    default_index = 0  # No selection
     current = st.session_state[state_key]
-    if current in filtered:
-        default_index = filtered.index(current)
+    if current and current in filtered:
+        default_index = filtered.index(current) + 1
 
     selected = st.selectbox(
-        "Select antigen",
-        filtered,
+        "Select antigen to display",
+        options,
         index=default_index,
         key=f"{state_key}__selectbox",
     )
-    st.session_state[state_key] = selected
-    return selected
+    value = None if selected == NO_SELECTION_LABEL else selected
+    st.session_state[state_key] = value
+    return value
 
 
 def _antigen_details_panel(df: pd.DataFrame, selected_antigen: Optional[str]) -> None:
