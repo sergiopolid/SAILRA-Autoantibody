@@ -9,6 +9,10 @@ InfinityBio/
 data/
 *.csv
 
+# Exception: small CSVs explicitly used by the web app
+!webdata/
+!webdata/*.csv
+
 # Python
 __pycache__/
 *.py[cod]

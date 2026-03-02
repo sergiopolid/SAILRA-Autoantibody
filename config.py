@@ -16,9 +16,10 @@ DATASETS = {
         "family": "husight_full_length",
         "isotype": "IgG",
         "contrasts": {
-            # Example placeholder contrast; replace paths/URLs with real ones.
-            "GroupA_vs_GroupB": {
-                "csv": "./data/husight_full_length_igg_GroupA_vs_GroupB.csv",
+            "GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA": {
+                # Copy the source CSV into ./webdata/ with this name:
+                # /n/data1/bwh/medicine/kim/lab/lung/sergio/2026/InfinityBio/InfinityBio/BWH_SPoli_IB1251_IgG_Cohort_1_HuSIGHT_FullLength_IgG_Reports/edger_Ig_offset_results/edger_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv
+                "csv": "./webdata/edger_HuSIGHT_FullLength_IgG_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv",
             },
         },
     },
@@ -27,8 +28,10 @@ DATASETS = {
         "family": "husight_full_length",
         "isotype": "IgA",
         "contrasts": {
-            "GroupA_vs_GroupB": {
-                "csv": "./data/husight_full_length_iga_GroupA_vs_GroupB.csv",
+            "GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA": {
+                # Copy the source CSV into ./webdata/ with this name:
+                # /n/data1/bwh/medicine/kim/lab/lung/sergio/2026/InfinityBio/InfinityBio/BWH_SPoli_IB1251_IgA_Cohort_1_HuSIGHT_FullLength_IgA_Reports/edger_Ig_offset_results/edger_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv
+                "csv": "./webdata/edger_HuSIGHT_FullLength_IgA_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv",
             },
         },
     },
@@ -37,8 +40,10 @@ DATASETS = {
         "family": "virsight",
         "isotype": "IgG",
         "contrasts": {
-            "GroupA_vs_GroupB": {
-                "csv": "./data/virsight_igg_GroupA_vs_GroupB.csv",
+            "GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA": {
+                # Copy the source CSV into ./webdata/ with this name:
+                # /n/data1/bwh/medicine/kim/lab/lung/sergio/2026/InfinityBio/InfinityBio/BWH_SPoli_IB1251_IgG_Cohort_1_VirSIGHT_IgG_Reports/edger_Ig_offset_results/edger_VirSIGHT_IgG_species_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA.csv
+                "csv": "./webdata/edger_VirSIGHT_IgG_species_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA.csv",
             },
         },
     },
@@ -47,8 +52,10 @@ DATASETS = {
         "family": "virsight",
         "isotype": "IgA",
         "contrasts": {
-            "GroupA_vs_GroupB": {
-                "csv": "./data/virsight_iga_GroupA_vs_GroupB.csv",
+            "GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA": {
+                # Copy the source CSV into ./webdata/ with this name:
+                # /n/data1/bwh/medicine/kim/lab/lung/sergio/2026/InfinityBio/InfinityBio/BWH_SPoli_IB1251_IgA_Cohort_1_VirSIGHT_IgA_Reports/edger_Ig_offset_results/edger_VirSIGHT_IgA_species_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA.csv
+                "csv": "./webdata/edger_VirSIGHT_IgA_species_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA.csv",
             },
         },
     },
