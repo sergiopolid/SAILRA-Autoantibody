@@ -282,3 +282,70 @@ def get_available_contrasts(dataset_key: str) -> list[str]:
     ds_cfg = DATASETS.get(dataset_key, {})
     return list(ds_cfg.get("contrasts", {}).keys())
 
+
+# GSEA result column candidates
+GSEA_PATHWAY_COLUMNS = ["pathway", "Pathway", "term", "Term", "ID", "geneset", "GeneSet"]
+GSEA_NES_COLUMNS = ["NES", "nes", "NES"]
+GSEA_PADJ_COLUMNS = ["padj", "FDR", "adj.P.Val", "qvalue", "fdr"]
+GSEA_PVAL_COLUMNS = ["pval", "pvalue", "PValue", "P.Value"]
+
+
+def _pick_column_gsea(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
+    for name in candidates:
+        if name in df.columns:
+            return name
+    lower_map = {c.lower(): c for c in df.columns}
+    for name in candidates:
+        if name.lower() in lower_map:
+            return lower_map[name.lower()]
+    return None
+
+
+@st.cache_data(show_spinner=False)
+def load_gsea_csv(csv_path: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
+    """
+    Load and standardize a GSEA results CSV (pathway, NES, padj/pval).
+    csv_path can be a local path or a URL (starts with http).
+    Returns (DataFrame with columns pathway, NES, padj, neglog10padj, error_message).
+    """
+    try:
+        if csv_path.strip().lower().startswith("http"):
+            resp = requests.get(csv_path)
+            resp.raise_for_status()
+            raw = pd.read_csv(StringIO(resp.text))
+        else:
+            raw = pd.read_csv(csv_path)
+    except Exception as exc:
+        return None, f"Failed to load GSEA CSV: {exc}"
+
+    if raw.empty:
+        return None, "GSEA CSV is empty."
+
+    df = raw.copy()
+
+    pathway_col = _pick_column_gsea(df, GSEA_PATHWAY_COLUMNS)
+    if not pathway_col:
+        return None, "GSEA CSV: could not find pathway/term column."
+    df = df.rename(columns={pathway_col: "pathway"})
+
+    nes_col = _pick_column_gsea(df, GSEA_NES_COLUMNS)
+    if not nes_col:
+        return None, "GSEA CSV: could not find NES column."
+    if nes_col != "NES":
+        df = df.rename(columns={nes_col: "NES"})
+
+    padj_col = _pick_column_gsea(df, GSEA_PADJ_COLUMNS)
+    pval_col = _pick_column_gsea(df, GSEA_PVAL_COLUMNS) if not padj_col else None
+    if padj_col:
+        if padj_col != "padj":
+            df = df.rename(columns={padj_col: "padj"})
+    elif pval_col:
+        df = df.rename(columns={pval_col: "padj"})
+    else:
+        return None, "GSEA CSV: could not find padj or pval column."
+
+    df["NES"] = pd.to_numeric(df["NES"], errors="coerce")
+    df["padj"] = pd.to_numeric(df["padj"], errors="coerce")
+    df["neglog10padj"] = -np.log10(np.clip(df["padj"].astype(float), 1e-300, None))
+    return df, None
+

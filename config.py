@@ -17,9 +17,11 @@ DATASETS = {
         "isotype": "IgG",
         "contrasts": {
             "GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA": {
-                # Copy the source CSV into ./webdata/ with this name:
-                # /n/data1/bwh/medicine/kim/lab/lung/sergio/2026/InfinityBio/InfinityBio/BWH_SPoli_IB1251_IgG_Cohort_1_HuSIGHT_FullLength_IgG_Reports/edger_Ig_offset_results/edger_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv
                 "csv": "./webdata/edger_HuSIGHT_FullLength_IgG_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv",
+                "gsea": {
+                    "Hallmark": "./webdata/gsea_husight_igg_Hallmark.csv",
+                    "GO BP": "./webdata/gsea_husight_igg_GOBP.csv",
+                },
             },
         },
     },
@@ -29,9 +31,11 @@ DATASETS = {
         "isotype": "IgA",
         "contrasts": {
             "GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA": {
-                # Copy the source CSV into ./webdata/ with this name:
-                # /n/data1/bwh/medicine/kim/lab/lung/sergio/2026/InfinityBio/InfinityBio/BWH_SPoli_IB1251_IgA_Cohort_1_HuSIGHT_FullLength_IgA_Reports/edger_Ig_offset_results/edger_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv
                 "csv": "./webdata/edger_HuSIGHT_FullLength_IgA_GroupA_RA-ILD_RA-ILA_vs_GroupB_RA-noILA_Ig_offset.csv",
+                "gsea": {
+                    "Hallmark": "./webdata/gsea_husight_iga_Hallmark.csv",
+                    "GO BP": "./webdata/gsea_husight_iga_GOBP.csv",
+                },
             },
         },
     },
@@ -60,6 +64,13 @@ DATASETS = {
         },
     },
 }
+
+
+def get_gsea_collections(dataset_key: str, contrast: str) -> dict[str, str]:
+    """Return dict of collection_label -> csv path for GSEA (empty if not configured)."""
+    ds = DATASETS.get(dataset_key, {})
+    c_cfg = ds.get("contrasts", {}).get(contrast, {})
+    return c_cfg.get("gsea", {})
 
 
 def get_dataset_keys_by_family() -> dict[str, dict[str, str]]:

@@ -8,12 +8,13 @@ import pandas as pd
 import streamlit as st
 
 import config
-from config import DATASETS, get_dataset_keys_by_family
+from config import DATASETS, get_dataset_keys_by_family, get_gsea_collections
 from data import (
     get_available_contrasts,
     load_and_standardize,
+    load_gsea_csv,
 )
-from plots import igg_iga_scatter, ma_plot, volcano_plot
+from plots import gsea_volcano_plot, igg_iga_scatter, ma_plot, volcano_plot
 
 
 st.set_page_config(page_title="edgeR Autoantibody Explorer", layout="wide")
@@ -266,6 +267,57 @@ def _render_dataset_tab(dataset_key: str) -> None:
     else:
         fig_ma = ma_plot(filtered, x_col=ma_x, selected_antigen=selected_antigen)
         st.plotly_chart(fig_ma, use_container_width=True, key=f"{dataset_key}__{contrast}__ma")
+
+    # GSEA volcano (if configured for this dataset/contrast)
+    gsea_collections = get_gsea_collections(dataset_key, contrast)
+    if gsea_collections:
+        st.subheader("GSEA")
+        gsea_choice = st.selectbox(
+            "Gene set collection",
+            options=list(gsea_collections.keys()),
+            key=f"{dataset_key}__{contrast}__gsea_collection",
+        )
+        gsea_path = gsea_collections[gsea_choice]
+        gsea_df, gsea_err = load_gsea_csv(gsea_path)
+        if gsea_err:
+            st.error(gsea_err)
+        else:
+            col_g1, col_g2, col_g3 = st.columns(3)
+            with col_g1:
+                gsea_padj = st.slider(
+                    "padj cutoff",
+                    min_value=0.001,
+                    max_value=0.2,
+                    value=0.05,
+                    step=0.005,
+                    key=f"{dataset_key}__{contrast}__gsea_padj",
+                )
+            with col_g2:
+                gsea_nes = st.slider(
+                    "|NES| cutoff",
+                    min_value=0.0,
+                    max_value=2.0,
+                    value=0.5,
+                    step=0.05,
+                    key=f"{dataset_key}__{contrast}__gsea_nes",
+                )
+            with col_g3:
+                gsea_label_n = st.number_input(
+                    "Label top N pathways",
+                    min_value=0,
+                    max_value=30,
+                    value=0,
+                    step=1,
+                    key=f"{dataset_key}__{contrast}__gsea_label_n",
+                )
+            st.markdown("**GSEA volcano**")
+            fig_gsea = gsea_volcano_plot(
+                gsea_df,
+                padj_cutoff=gsea_padj,
+                nes_cutoff=gsea_nes,
+                label_top_n=gsea_label_n,
+            )
+            st.plotly_chart(fig_gsea, use_container_width=True, key=f"{dataset_key}__{contrast}__gsea_volcano")
 
     # Table + export
     st.subheader("Hits table")

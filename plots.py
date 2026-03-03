@@ -266,3 +266,65 @@ def igg_iga_scatter(
     )
     return fig
 
+
+def gsea_volcano_plot(
+    df: pd.DataFrame,
+    padj_cutoff: float = 0.05,
+    nes_cutoff: float = 0.5,
+    label_top_n: int = 0,
+) -> go.Figure:
+    """
+    GSEA volcano: x=NES, y=-log10(padj). Categories Up (NES > nes_cutoff, padj <= padj_cutoff),
+    Down (NES < -nes_cutoff, padj <= padj_cutoff), NS.
+    """
+    data = df.copy()
+    sig_up = (data["NES"] >= nes_cutoff) & (data["padj"] <= padj_cutoff)
+    sig_down = (data["NES"] <= -nes_cutoff) & (data["padj"] <= padj_cutoff)
+    cat = np.full(len(data), "NS", dtype=object)
+    cat[sig_up.to_numpy()] = "Up"
+    cat[sig_down.to_numpy()] = "Down"
+    data["category"] = cat
+
+    text = None
+    if label_top_n > 0:
+        # Rank by significance (smallest padj, then by |NES|)
+        order = data["padj"].fillna(1.0)
+        top_idx = order.sort_values().index[:label_top_n]
+        text = data["pathway"].where(data.index.isin(top_idx)).fillna("").astype(str)
+
+    fig = px.scatter(
+        data,
+        x="NES",
+        y="neglog10padj",
+        color="category",
+        hover_data={"pathway": True, "NES": True, "padj": True},
+        text=text,
+        color_discrete_map={"Up": "#d62728", "Down": "#1f77b4", "NS": "#bbbbbb"},
+    )
+
+    # Custom hover: pathway first (bold), then NES and padj
+    for i, trace in enumerate(fig.data):
+        if trace.name and trace.name != "Selected":
+            subset = data[data["category"] == trace.name]
+            if not subset.empty:
+                trace.customdata = subset[["pathway", "NES", "padj"]].values
+                trace.hovertemplate = (
+                    "<span style='font-size:14px'><b>%{customdata[0]}</b></span><br>"
+                    "<span style='font-size:11px'>NES: %{x:.3f}<br>padj: %{customdata[2]:.4f}</span><extra></extra>"
+                )
+
+    y_thresh = -np.log10(max(padj_cutoff, 1e-300))
+    fig.add_hline(y=y_thresh, line_dash="dot", line_color="black")
+    fig.add_vline(x=nes_cutoff, line_dash="dot", line_color="black")
+    fig.add_vline(x=-nes_cutoff, line_dash="dot", line_color="black")
+
+    fig.update_layout(
+        xaxis_title="NES",
+        yaxis_title="-log10(padj)",
+        legend_title="Significance",
+        template="plotly_white",
+        uirevision="gsea_volcano",
+        hoverlabel=dict(font=dict(size=12), bgcolor="white"),
+    )
+    return fig
+
