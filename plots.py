@@ -84,6 +84,17 @@ def volcano_plot(
         color_discrete_map={"Up": "#d62728", "Down": "#1f77b4", "NS": "#bbbbbb"},
     )
 
+    # Custom hover: gene name first (bold), then logFC and FDR only
+    for i, trace in enumerate(fig.data):
+        if trace.name and trace.name != "Selected antigen":
+            subset = data[data["category"] == trace.name]
+            if not subset.empty:
+                trace.customdata = subset[["antigen", "FDR"]].values
+                trace.hovertemplate = (
+                    "<span style='font-size:14px'><b>%{customdata[0]}</b></span><br>"
+                    "<span style='font-size:11px'>logFC: %{x:.3f}<br>FDR: %{customdata[1]:.4f}</span><extra></extra>"
+                )
+
     # Threshold lines
     y_thresh = -np.log10(max(p_cutoff, 1e-300))
     fig.add_hline(y=y_thresh, line_dash="dot", line_color="black")
@@ -113,7 +124,8 @@ def volcano_plot(
         yaxis_title=y_label,
         legend_title="Significance",
         template="plotly_white",
-        uirevision="volcano",  # keeps plot state on re-render so dots don't disappear
+        uirevision="volcano",
+        hoverlabel=dict(font=dict(size=12), bgcolor="white"),
     )
     return fig
 
@@ -140,6 +152,15 @@ def ma_plot(
         color_discrete_sequence=["#1f77b4"],
     )
 
+    # Custom hover: gene name first (bold), then logFC and FDR only
+    if len(fig.data) > 0:
+        trace = fig.data[0]
+        trace.customdata = data[["antigen", "FDR"]].values
+        trace.hovertemplate = (
+            "<span style='font-size:14px'><b>%{customdata[0]}</b></span><br>"
+            "<span style='font-size:11px'>logFC: %{y:.3f}<br>FDR: %{customdata[1]:.4f}</span><extra></extra>"
+        )
+
     fig.add_hline(y=0.0, line_dash="dash", line_color="black")
 
     if selected_antigen and selected_antigen in data["antigen"].values:
@@ -162,7 +183,8 @@ def ma_plot(
         xaxis_title=x_col,
         yaxis_title="logFC",
         template="plotly_white",
-        uirevision="ma",  # keeps plot state on re-render so dots don't disappear
+        uirevision="ma",
+        hoverlabel=dict(font=dict(size=12), bgcolor="white"),
     )
     return fig
 

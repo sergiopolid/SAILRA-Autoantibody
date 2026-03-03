@@ -240,36 +240,32 @@ def _render_dataset_tab(dataset_key: str) -> None:
         selected_antigen = _antigen_search_and_select(filtered, state_key)
         _antigen_details_panel(filtered, selected_antigen)
 
-    # Plots
+    # Plots (volcano on top, MA below — full width for a bit bigger view)
     st.subheader("Plots")
-    col_left, col_right = st.columns(2)
+    st.markdown("**Volcano plot**")
+    fig_volcano = volcano_plot(
+        filtered,
+        p_col=sig_col,
+        p_cutoff=sig_cutoff,
+        logfc_cutoff=logfc_cutoff,
+        label_top_n=label_top_n,
+        ranking_metric=ranking_metric,
+        selected_antigen=selected_antigen,
+    )
+    st.plotly_chart(fig_volcano, use_container_width=True, key=f"{dataset_key}__{contrast}__volcano")
 
-    with col_left:
-        st.markdown("**Volcano plot**")
-        fig_volcano = volcano_plot(
-            filtered,
-            p_col=sig_col,
-            p_cutoff=sig_cutoff,
-            logfc_cutoff=logfc_cutoff,
-            label_top_n=label_top_n,
-            ranking_metric=ranking_metric,
-            selected_antigen=selected_antigen,
-        )
-        st.plotly_chart(fig_volcano, use_container_width=True, key=f"{dataset_key}__{contrast}__volcano")
+    st.markdown("**MA plot**")
+    ma_x = None
+    if "logCPM" in df.columns and not df["logCPM"].isna().all():
+        ma_x = "logCPM"
+    elif "AveExpr" in df.columns and not df["AveExpr"].isna().all():
+        ma_x = "AveExpr"
 
-    with col_right:
-        st.markdown("**MA plot**")
-        ma_x = None
-        if "logCPM" in df.columns and not df["logCPM"].isna().all():
-            ma_x = "logCPM"
-        elif "AveExpr" in df.columns and not df["AveExpr"].isna().all():
-            ma_x = "AveExpr"
-
-        if ma_x is None:
-            st.info("MA plot unavailable: logCPM/AveExpr column not found.")
-        else:
-            fig_ma = ma_plot(filtered, x_col=ma_x, selected_antigen=selected_antigen)
-            st.plotly_chart(fig_ma, use_container_width=True, key=f"{dataset_key}__{contrast}__ma")
+    if ma_x is None:
+        st.info("MA plot unavailable: logCPM/AveExpr column not found.")
+    else:
+        fig_ma = ma_plot(filtered, x_col=ma_x, selected_antigen=selected_antigen)
+        st.plotly_chart(fig_ma, use_container_width=True, key=f"{dataset_key}__{contrast}__ma")
 
     # Table + export
     st.subheader("Hits table")
