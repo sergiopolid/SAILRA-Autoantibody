@@ -63,10 +63,11 @@ def volcano_plot(
         ascending = False
     data["_rank_score"] = score
 
+    # Use empty string for unlabeled points so Plotly always has one text per point (avoids disappearing markers on re-render)
     text = None
     if label_top_n > 0:
         top_idx = order.sort_values(ascending=ascending).index[:label_top_n]
-        text = data["antigen"].where(data.index.isin(top_idx))
+        text = data["antigen"].where(data.index.isin(top_idx)).fillna("").astype(str)
 
     fig = px.scatter(
         data,
@@ -112,6 +113,7 @@ def volcano_plot(
         yaxis_title=y_label,
         legend_title="Significance",
         template="plotly_white",
+        uirevision="volcano",  # keeps plot state on re-render so dots don't disappear
     )
     return fig
 
@@ -160,6 +162,7 @@ def ma_plot(
         xaxis_title=x_col,
         yaxis_title="logFC",
         template="plotly_white",
+        uirevision="ma",  # keeps plot state on re-render so dots don't disappear
     )
     return fig
 
@@ -237,6 +240,7 @@ def igg_iga_scatter(
         yaxis_title="logFC (IgA)",
         legend_title="Significance",
         template="plotly_white",
+        uirevision="compare_scatter",
     )
     return fig
 
